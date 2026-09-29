@@ -118,15 +118,59 @@ your real Master 1153420 record, duplicate-phone handling, and the report
 formatting rules (percent rounding, comma formatting, zero → `-`) verified
 against the exact numbers from your screenshot.
 
-## 5. Deploying to Render (free)
+## 5. Deploying online for free
 
-Same as any Python web service: New → Web Service → connect your repo,
-build command `pip install -r requirements.txt`, start command
-`python main.py`, set every `.env` variable plus `RUN_MODE=webhook` and
-`WEBHOOK_BASE_URL=https://<your-service>.onrender.com`. Free tier sleeps
-after 15 minutes idle (30–50s wake delay on the next message) — see the
-cost breakdown in the project's original design notes if you want the
-full free-vs-paid comparison.
+Two genuinely free options, depending on whether you have a card to verify with:
+
+### Option A — PythonAnywhere (recommended: no credit card, ever)
+
+PythonAnywhere's free tier needs no card at all, and — unlike some other
+free hosts — its free web apps don't sleep from inactivity. The trade-off:
+its free tier only runs WSGI web apps, not a long-running background
+process, so this project includes `flask_app.py` specifically for this
+host (see the file's docstring for why). `api.telegram.org` and
+`*.googleapis.com` (everything this bot needs) are already on
+PythonAnywhere's free allowlist — no extra request needed.
+
+1. Sign up free at https://www.pythonanywhere.com (no card required).
+2. Open a **Bash console** (Dashboard → Consoles → Bash) and upload/clone
+   this project into it (e.g. `git clone <your-repo-url>`), then:
+   ```bash
+   cd telegram-customer-bot
+   pip install --user -r requirements.txt
+   cp .env.example .env   # then edit it with your real values
+   ```
+   Upload your `credentials/service-account.json` the same way (Files tab,
+   or `nano credentials/service-account.json` and paste its contents).
+3. In `.env`, set `RUN_MODE=webhook` and
+   `WEBHOOK_BASE_URL=https://<your-pythonanywhere-username>.pythonanywhere.com`.
+4. Go to the **Web** tab → Add a new web app → choose **Flask** → point it
+   at `flask_app.py` in this project (PythonAnywhere will ask for the path
+   to your Flask object; it's the `flask_app` variable inside `flask_app.py`).
+5. Reload the web app (Web tab → green Reload button).
+6. Back in the Bash console, run the one-time webhook registration:
+   ```bash
+   python scripts/set_webhook.py
+   ```
+7. Message your bot `/start` on Telegram.
+
+Free-tier limits worth knowing: CPU-seconds are capped per day (fine for
+occasional agent lookups), and outbound requests to sites not on the
+allowlist are blocked — not an issue here since Telegram and Google are
+both already allowed.
+
+### Option B — Render (needs a card for account verification)
+
+Render's free web services are genuinely $0/month, but Render now commonly
+requires a card on file for a $1 authorization-and-refund identity check
+before it'll activate free services on new accounts — even though nothing
+is charged. If you have a card and don't mind that check: New → Web
+Service → connect your repo, build command `pip install -r
+requirements.txt`, start command `python main.py`, set every `.env`
+variable plus `RUN_MODE=webhook` and
+`WEBHOOK_BASE_URL=https://<your-service>.onrender.com`. Its free tier also
+sleeps after 15 minutes idle (30–50s wake delay on the next message),
+which PythonAnywhere's free tier doesn't do.
 
 ## 6. Admin commands
 
@@ -147,3 +191,5 @@ Restricted to `ADMIN_TELEGRAM_IDS`:
 | "تم التحقق... لكن لسه مفيش تقرير كوميشن متاح" | The agent's Master exists in the agents tab but not (yet) in the commission tab — check the sheet, then `/sync` |
 | `/sync` reports skipped rows | Logs name the exact row/column — one bad row never blocks the rest |
 | Google API errors during sync | Confirm the Sheet is shared with the service account's email, both APIs are enabled, and both tab names match your `.env` |
+| PythonAnywhere: "Access Denied... not on our whitelist" | Shouldn't happen for this bot (`googleapis.com` and `telegram.org` are pre-allowed) — if you see it for some other domain, see https://help.pythonanywhere.com/pages/RequestingAllowlistAdditions/ |
+| PythonAnywhere: webhook set but bot doesn't respond | Re-check step 6 (`python scripts/set_webhook.py` ran successfully) and that the Web tab shows your app as reloaded after any `.env` change |
